@@ -2,6 +2,7 @@ import logging
 
 import telegram
 import tweepy
+from envparse import Env
 from pytz import timezone, utc
 from telegram import Bot
 from telegram.error import TelegramError
@@ -9,6 +10,9 @@ from telegram.error import TelegramError
 from models import TelegramChat, TwitterUser
 from util import escape_markdown, prepare_tweet_text
 
+env = Env(
+    TELEGRAM_CHANNEL_NAME=str
+)
 
 class TwitterForwarderBot(Bot):
 
@@ -41,24 +45,27 @@ class TwitterForwarderBot(Bot):
                 tz = timezone(chat.timezone_name)
                 created_dt = created_dt.astimezone(tz)
             created_at = created_dt.strftime('%Y-%m-%d %H:%M:%S %Z')
-            self.sendMessage(
-                chat_id=chat.chat_id,
-                disable_web_page_preview=not photo_url,
-                text="""
+            formatedText = """
 {link_preview}*{name}* ([@{screen_name}](https://twitter.com/{screen_name})) at {created_at}:
 {text}
 -- [Link to this Tweet](https://twitter.com/{screen_name}/status/{tw_id})
-"""
-                    .format(
-                    link_preview=photo_url,
-                    text=prepare_tweet_text(tweet.text),
-                    name=escape_markdown(tweet.name),
-                    screen_name=tweet.screen_name,
-                    created_at=created_at,
-                    tw_id=tweet.tw_id,
-                ),
+""".format(link_preview=photo_url,
+            text=prepare_tweet_text(tweet.text),
+            name=escape_markdown(tweet.name),
+            screen_name=tweet.screen_name,
+            created_at=created_at,
+            tw_id=tweet.tw_id,
+        )
+            self.sendMessage(
+                chat_id=chat.chat_id,
+                disable_web_page_preview=not photo_url,
+                text=formatedText,
                 parse_mode=telegram.ParseMode.MARKDOWN)
-
+            self.sendMessage(
+                chat_id='@' + env('TELEGRAM_CHANNEL_NAME'),
+                disable_web_page_preview=not photo_url,
+                text=formatedText,
+                parse_mode=telegram.ParseMode.MARKDOWN)
         except TelegramError as e:
             self.logger.info("Couldn't send tweet {} to chat {}: {}".format(
                 tweet.tw_id, chat.chat_id, e.message

@@ -1,0 +1,18 @@
+version: '3.7'
+
+services:
+  bot:
+    build: .
+    container_name: bot
+    restart: always
+    environment:
+      - TELEGRAM_BOT_TOKEN=yourBotTokenHere
+      - TWITTER_CONSUMER_KEY=yourTwitterKeyHere
+      - TWITTER_CONSUMER_SECRET=yourTwitterSecretHere
+      - TELEGRAM_CHANNEL_NAME=yourChannelNameHere
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
